@@ -364,7 +364,6 @@ town_centroids_50k <- st_centroid(mtowns_50k)
 town_coords_50k <- apply(st_coordinates(town_centroids_50k), 1,
                      function(x) paste(x[2], x[1], sep = ","))
 
-
 #test the town locations by getting distance to Suhag
 df_townlocations <- google_distance(
   origins = town_coords_50k,
@@ -376,7 +375,7 @@ df_townlocations <- google_distance(
 df_townlocations
 #this works: so the town coords are fine
 
-town_sample <- town_coords_50k |> head(n = 5)
+town_sample <- town_coords_50k |> head(n = 2)
 
 #Step 1: Create village centroid batches
 batch_size <- 25#max. 25 villages per list (to comply with Google API)
@@ -414,9 +413,9 @@ get_nearest_town_for_batch <- function(village_df, town_sample) {
 
       tibble(
         distance_km  = if (all(is.na(distances))) NA_real_ else min(distances,
-                                                           na.rm = TRUE),
+                                                                    na.rm = TRUE),
         duration_min = if (all(is.na(durations))) NA_real_ else min(durations,
-                                                           na.rm = TRUE)
+                                                                    na.rm = TRUE)
       )
     }
   )
@@ -438,37 +437,42 @@ nearest_town_test <- purrr::map_dfr(
 )
 
 ####Test simple####
-#2 by 2 case: 2 origin coords. and 2 destinations
-df_test <- google_distance(
-  origins = village_batch_sample$`1`$coord,#test for first village list
-  destinations = town_sample,#test town sample
-  mode = "driving",
-  key = google_key)
+town_sample <- town_coords_50k |> head(n = 10)
 
-#extr. min. distance per origin
-nearest_town_df <- map_df(
-  seq_len(nrow(df_test$rows)),
-  function(i) {
+# Step 1: Create village centroid batches
+batch_size <- 25
 
-    el <- df_test$rows$elements[[i]]
-
-    distances <- ifelse(
-      el$status == "OK",
-      el$distance$value / 1000,
-      NA_real_
-    )
-
-    durations <- ifelse(
-      el$status == "OK",
-      el$duration$value / 60,
-      NA_real_
-    )
-
-    tibble(
-      distance_km  = min(distances, na.rm = TRUE),
-      duration_min = min(durations, na.rm = TRUE)
-    )
-  }
+village_centroid_batches <- split(
+  village_centroids_df,
+  ceiling(seq_len(nrow(village_centroids_df)) / batch_size)
 )
 
+# Step 2: Function that ONLY calls google_distance()
+get_distance_batch_raw <- function(village_df, town_sample) {
+
+  google_distance(
+    origins = village_df$coord,
+    destinations = town_sample,
+    mode = "driving",
+    key = google_key
+  )
+}
+
+# Step 3: Run batch-wise and keep raw outputs in a list
+distance_raw <- purrr::map(
+  village_centroid_batches,
+  ~ get_distance_batch_raw(
+    village_df = .x,
+    town_sample = town_sample
+  )
+)
+
+#Inspect first batch
+distance_raw[[2]]$rows$elements
+
+#Step 4: Extract min. distance for each village
+min_distances_km <- purrr::map_dbl(
+  distance_raw[[2]]$rows$elements,
+  ~ min(.x$distance$value) / 1000
+)
 
