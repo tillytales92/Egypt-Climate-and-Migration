@@ -17,7 +17,6 @@ Scripts follow a numbered naming convention indicating processing stages:
 - **3_**: Climate stress analysis, time series creation, and mapping (e.g., `3_ClimateStress_Timeseries_Temperature.R`, `3_Mapping_UTCI.R`)
 - **4_**: Final dataset construction (e.g., `4_HHdataset.R`)
 - **5_**: Analysis outputs (e.g., `5_VulnerabilityIndices.R`)
-- **9_**: Tutorial/reference scripts (e.g., `9_krigR_tutorial.R`, `9_stagg_tutorial.R`)
 
 ### Directory Structure
 
