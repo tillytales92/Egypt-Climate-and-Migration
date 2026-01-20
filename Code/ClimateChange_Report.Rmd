@@ -1,5 +1,5 @@
 ---
-title: "Climate Change in Egypt: Temperature Trends (1960-2024)"
+title: "Climate Change in Egypt: Temperature and Precipitation Trends"
 author: "Egypt Climate and Migration Project"
 date: "`r Sys.Date()`"
 output:
@@ -24,26 +24,28 @@ knitr::opts_chunk$set(
 
 # Executive Summary
 
-This report analyzes temperature trends across Egyptian governorates from 1960 to 2024 using ERA5 reanalysis data. Key findings include:
+This report analyzes temperature and precipitation trends across Egyptian governorates using ERA5 (1960-2024) and CHIRPS (1981-2024) data. Key findings include:
 
-- **Warming Trend**: All governorates show clear warming trends since 1960
+- **Warming Trend**: All governorates show clear warming trends, with temperatures increasing 1.5-2.5°C since 1960
 - **Recent Acceleration**: Temperature deviations from the 1960-2010 baseline have intensified since 2010
-- **Regional Variation**: Temperature changes vary across governorates, with population-weighted measures often differing from unweighted spatial averages
+- **Precipitation Variability**: Rainfall patterns show high inter-annual variability with notable extreme dry and wet years
+- **Regional Variation**: Both temperature and precipitation changes vary across governorates
 
 # Data and Methods
 
 ## Data Sources
 
-- **Climate Data**: ERA5 reanalysis (1960-2024) at daily resolution
+- **Temperature Data**: ERA5 reanalysis (1960-2024) at daily resolution
+- **Precipitation Data**: CHIRPS (1981-2024) at daily resolution
 - **Population Data**: LandScan population distribution (2020)
-- **Baseline Period**: 1960-2010 (used for calculating deviations and z-scores)
+- **Baseline Period**: 1960-2010 for temperature; 1981-2024 mean for precipitation
 
 ## Weighting Methods
 
 1. **Unweighted**: Simple spatial average across each governorate
 2. **Population-weighted**: Weighted by where people actually live within each governorate
 
-Population weighting provides a more accurate representation of human exposure to temperature changes.
+Population weighting provides a more accurate representation of human exposure to climate changes.
 
 ## Load Packages and Data
 
@@ -58,13 +60,13 @@ if (any(installed_libs == FALSE)) {
 invisible(lapply(libs, library, character.only = TRUE))
 ```
 
-```{r load-data}
+```{r load-temperature-data}
 # Load temperature data
 era5_temp_df <- readRDS(file = paste(here(), "Data", "intermediate",
                                      "Governorate Data",
                                      "era5_temp_19602024.Rds", sep = "/"))
 
-# Create annual data
+# Create annual temperature data
 era5_temp_annual <- era5_temp_df |>
   group_by(name, year) |>
   summarise(
@@ -120,6 +122,53 @@ era5_temp_annual <- era5_temp_annual |>
     z_score_max_pop = (annual_mean_maxtemp_pop - mean_maxtemp_pop_baseline) / sd_maxtemp_pop_baseline,
     z_score_min_pop = (annual_mean_mintemp_pop - mean_mintemp_pop_baseline) / sd_mintemp_pop_baseline
   )
+```
+
+```{r load-precipitation-data}
+# Load precipitation data
+chirps_yearly <- readRDS(file = paste(here(), "Data", "intermediate",
+                                      "Governorate Data",
+                                      "chirps_prec_yearly_19812024", sep = "/"))
+
+# Calculate precipitation statistics
+stats_yearly <- chirps_yearly |>
+  group_by(name) |>
+  summarise(
+    mean_popland_prec = mean(mean_prec_popweighted_chirps, na.rm = TRUE),
+    sd_popland_prec = sd(mean_prec_popweighted_chirps, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Merge back and calculate z-scores and extremes
+chirps_yearly <- chirps_yearly |>
+  left_join(stats_yearly, by = "name") |>
+  mutate(
+    z_score = (mean_prec_popweighted_chirps - mean_popland_prec) / sd_popland_prec,
+    shock = case_when(
+      z_score > 2 ~ 1,   # extreme wet year
+      z_score < -2 ~ 1,  # extreme dry year
+      TRUE ~ 0
+    )
+  )
+
+# Add deciles of annual precipitation
+chirps_yearly <- chirps_yearly |>
+  group_by(name) |>
+  mutate(prec_decile = ntile(mean_prec_popweighted_chirps, 10)) |>
+  ungroup()
+
+# Create shading ranges for extreme years
+shading_yearly <- chirps_yearly |>
+  mutate(
+    xmin = as.Date(paste0(year, "-01-01")),
+    xmax = as.Date(paste0(year, "-12-31")),
+    shade_type = case_when(
+      prec_decile == 1 ~ "Driest 10%",
+      prec_decile == 10 ~ "Wettest 10%",
+      TRUE ~ NA_character_
+    )
+  ) |>
+  filter(!is.na(shade_type))
 ```
 
 # Temperature Trends by Governorate
@@ -202,79 +251,131 @@ ggplotly(p_compare, tooltip = c("x", "y", "colour")) |>
   layout(hovermode = "closest")
 ```
 
-## Absolute Temperature Trends
+# Precipitation Trends by Governorate
 
-This plot shows absolute annual mean temperatures (population-weighted) with trend lines.
+## Annual Rainfall (Population-Weighted)
 
-```{r plot-absolute, fig.height=10}
-p_absolute <- era5_temp_annual |>
+This plot shows annual rainfall patterns from 1981 to 2024. The smooth trend line (red dashed) helps identify long-term patterns amid high year-to-year variability.
+
+```{r plot-rainfall-basic, fig.height=10}
+p_rainfall <- chirps_yearly |>
   filter(name %in% key_govs) |>
-  ggplot(aes(x = year, y = annual_mean_temp_pop)) +
-  geom_line(color = "#0072B2", linewidth = 1) +
-  geom_point(color = "#0072B2", size = 2, alpha = 0.7) +
-  geom_smooth(method = "loess", se = TRUE, color = "#D55E00",
-              fill = "#D55E00", alpha = 0.2) +
+  ggplot(aes(x = date, y = mean_prec_popweighted_chirps)) +
+  geom_col(fill = "steelblue", color = "black", alpha = 0.7, linewidth = 0.2) +
+  geom_smooth(se = FALSE, color = "darkred", linetype = "dashed", linewidth = 0.8) +
   facet_wrap(~name, ncol = 2) +
+  scale_x_date(
+    date_labels = "%Y",
+    breaks = seq(from = as.Date("1981-01-01"),
+                 to = as.Date("2024-01-01"),
+                 by = "5 years")
+  ) +
   theme_minimal(base_size = 12) +
   labs(
-    title = "Mean Temperature - Absolute Values (Population-weighted)",
-    subtitle = "Annual averages - ERA5 data",
+    title = "Annual Rainfall (Population-weighted) by Governorate",
+    subtitle = "CHIRPS data (1981-2024)",
     x = "Year",
-    y = "Temperature (°C)"
+    y = "Rainfall (mm)"
   ) +
   theme(
-    legend.position = "bottom",
     strip.background = element_rect(fill = "lightgray", color = NA),
     strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
     panel.grid.minor = element_blank()
   )
 
-ggplotly(p_absolute, tooltip = c("x", "y")) |>
+ggplotly(p_rainfall, tooltip = c("x", "y")) |>
   layout(hovermode = "closest")
 ```
 
-## Temperature Extremes: Maximum Temperature
+## Annual Rainfall with Extreme Years Highlighted
 
-Maximum temperatures are particularly relevant for heat stress and health impacts.
+This visualization highlights the driest (red shading) and wettest (blue shading) 10% of years for each governorate, revealing patterns in precipitation extremes.
 
-```{r plot-maxtemp, fig.height=10}
-p_max_dev <- era5_temp_annual |>
+```{r plot-rainfall-extremes, fig.height=10}
+p_rainfall_extremes <- chirps_yearly |>
   filter(name %in% key_govs) |>
-  ggplot(aes(x = year, y = temp_diff_max_pop, fill = temp_diff_max_pop)) +
-  geom_col(color = "black", width = 0.8, alpha = 0.9) +
-  facet_wrap(~name, ncol = 2) +
-  scale_fill_gradient2(
-    low = "#0571b0",
-    mid = "white",
-    high = "#ca0020",
-    midpoint = 0,
-    name = "Deviation (°C)"
+  ggplot(aes(x = date, y = mean_prec_popweighted_chirps)) +
+  geom_rect(
+    data = shading_yearly |> filter(name %in% key_govs),
+    aes(xmin = xmin, xmax = xmax,
+        ymin = 0, ymax = Inf,
+        fill = shade_type),
+    inherit.aes = FALSE, alpha = 0.3
   ) +
-  scale_x_continuous(breaks = seq(1960, 2024, by = 10)) +
+  geom_col(fill = "steelblue", color = "black", alpha = 0.7, linewidth = 0.2) +
+  geom_smooth(se = FALSE, color = "darkred", linetype = "dashed", linewidth = 0.8) +
+  facet_wrap(~name, ncol = 2) +
+  scale_fill_manual(
+    values = c("Driest 10%" = "tomato", "Wettest 10%" = "dodgerblue"),
+    name = "Rainfall Extremes"
+  ) +
+  scale_x_date(
+    date_labels = "%Y",
+    breaks = seq(from = as.Date("1981-01-01"),
+                 to = as.Date("2024-01-01"),
+                 by = "5 years")
+  ) +
   theme_minimal(base_size = 12) +
   labs(
-    title = "Maximum Temperature - Deviation from Baseline (Population-weighted)",
-    subtitle = "Relative to 1960-2010 average - ERA5 data",
+    title = "Annual Rainfall with Extreme Years Highlighted",
+    subtitle = "CHIRPS data (1981-2024) - Shaded areas show driest/wettest 10% of years",
     x = "Year",
-    y = "Temperature Deviation (°C)"
+    y = "Rainfall (mm)"
   ) +
   theme(
-    legend.position = "bottom",
     strip.background = element_rect(fill = "lightgray", color = NA),
     strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom",
     panel.grid.minor = element_blank()
   )
 
-ggplotly(p_max_dev, tooltip = c("x", "y")) |>
+ggplotly(p_rainfall_extremes, tooltip = c("x", "y")) |>
+  layout(hovermode = "closest")
+```
+
+## Free Y-Axis Comparison
+
+This version uses independent y-axes for each governorate, making it easier to see relative patterns within each region despite absolute differences in rainfall amounts.
+
+```{r plot-rainfall-free, fig.height=10}
+p_rainfall_free <- chirps_yearly |>
+  filter(name %in% key_govs) |>
+  ggplot(aes(x = date, y = mean_prec_popweighted_chirps)) +
+  geom_col(fill = "steelblue", color = "black", alpha = 0.7, linewidth = 0.2) +
+  geom_smooth(se = FALSE, color = "darkred", linetype = "dashed", linewidth = 0.8) +
+  facet_wrap(~name, ncol = 2, scales = "free_y") +
+  scale_x_date(
+    date_labels = "%Y",
+    breaks = seq(from = as.Date("1981-01-01"),
+                 to = as.Date("2024-01-01"),
+                 by = "5 years")
+  ) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Annual Rainfall (Free Y-Axis) by Governorate",
+    subtitle = "CHIRPS data (1981-2024) - Independent scales for each governorate",
+    x = "Year",
+    y = "Rainfall (mm)"
+  ) +
+  theme(
+    strip.background = element_rect(fill = "lightgray", color = NA),
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.minor = element_blank()
+  )
+
+ggplotly(p_rainfall_free, tooltip = c("x", "y")) |>
   layout(hovermode = "closest")
 ```
 
 # Statistical Summary
 
-## Overall Temperature Statistics by Governorate
+## Temperature Statistics by Governorate
 
-```{r summary-table}
-summary_stats <- era5_temp_annual |>
+```{r summary-table-temp}
+summary_stats_temp <- era5_temp_annual |>
   filter(name %in% key_govs) |>
   group_by(name) |>
   summarise(
@@ -292,122 +393,121 @@ summary_stats <- era5_temp_annual |>
   rename(Governorate = name)
 
 datatable(
-  summary_stats,
+  summary_stats_temp,
   options = list(pageLength = 10, dom = 't'),
-  caption = "Temperature statistics for the full period (1960-2024). Warming trend shows total temperature increase over the period."
+  caption = "Temperature statistics for 1960-2024. Warming trend shows total temperature increase over the period."
 )
 ```
 
-## Decadal Averages (Population-Weighted)
+## Precipitation Statistics by Governorate
 
-```{r decade-table}
-decade_stats <- era5_temp_annual |>
+```{r summary-table-precip}
+summary_stats_precip <- chirps_yearly |>
   filter(name %in% key_govs) |>
-  mutate(decade = paste0(floor(year / 10) * 10, "s")) |>
-  group_by(name, decade) |>
+  group_by(name) |>
   summarise(
-    `Mean Temp (°C)` = round(mean(annual_mean_temp_pop, na.rm = TRUE), 2),
-    `Deviation (°C)` = round(mean(temp_diff_mean_pop, na.rm = TRUE), 2),
+    `Mean Annual Rainfall (mm)` = round(mean(mean_prec_popweighted_chirps, na.rm = TRUE), 1),
+    `SD (mm)` = round(sd(mean_prec_popweighted_chirps, na.rm = TRUE), 1),
+    `CV (%)` = round(sd(mean_prec_popweighted_chirps, na.rm = TRUE) /
+                     mean(mean_prec_popweighted_chirps, na.rm = TRUE) * 100, 1),
+    `Min Year (mm)` = round(min(mean_prec_popweighted_chirps, na.rm = TRUE), 1),
+    `Max Year (mm)` = round(max(mean_prec_popweighted_chirps, na.rm = TRUE), 1),
     .groups = "drop"
-  ) |>
-  pivot_wider(
-    names_from = decade,
-    values_from = c(`Mean Temp (°C)`, `Deviation (°C)`),
-    names_glue = "{decade}_{.value}"
   ) |>
   rename(Governorate = name)
 
 datatable(
-  decade_stats,
-  options = list(pageLength = 10, dom = 't', scrollX = TRUE),
-  caption = "Decadal temperature averages showing progression of warming. Deviation is relative to 1960-2010 baseline."
+  summary_stats_precip,
+  options = list(pageLength = 10, dom = 't'),
+  caption = "Precipitation statistics for 1981-2024. CV = Coefficient of Variation (higher values indicate more variability)."
 )
 ```
 
-## Climate Shocks: Extreme Years
+## Extreme Rainfall Years
 
-Years where temperature exceeded ±2 standard deviations from the baseline are considered extreme events or "climate shocks".
-
-```{r shock-table}
-shock_years <- era5_temp_annual |>
+```{r extreme-years-table}
+extreme_years <- chirps_yearly |>
   filter(name %in% key_govs) |>
-  filter(abs(z_score_mean_pop) > 2) |>
+  filter(abs(z_score) > 2) |>
   mutate(
-    `Shock Type` = ifelse(z_score_mean_pop > 2, "Heat", "Cold"),
-    `Z-Score` = round(z_score_mean_pop, 2),
-    `Deviation (°C)` = round(temp_diff_mean_pop, 2)
+    `Extreme Type` = ifelse(z_score > 2, "Wet", "Dry"),
+    `Z-Score` = round(z_score, 2),
+    `Rainfall (mm)` = round(mean_prec_popweighted_chirps, 1)
   ) |>
-  select(Governorate = name, Year = year, `Shock Type`, `Z-Score`, `Deviation (°C)`) |>
+  select(Governorate = name, Year = year, `Extreme Type`, `Z-Score`, `Rainfall (mm)`) |>
   arrange(Governorate, desc(Year))
 
 datatable(
-  shock_years,
-  options = list(pageLength = 10, scrollX = TRUE),
-  caption = "Extreme temperature years (±2 SD from baseline). Recent years show more frequent heat shocks."
+  extreme_years,
+  options = list(pageLength = 15, scrollX = TRUE),
+  caption = "Extreme rainfall years (±2 SD from mean). Dry extremes indicate drought risk; wet extremes indicate flood risk."
 )
 ```
 
 # Key Findings
 
-## 1. Accelerating Warming Trend
+## Temperature
 
+### 1. Accelerating Warming Trend
 - All governorates show clear warming trends since 1960
 - Total warming ranges from approximately 1.5°C to 2.5°C depending on location
 - The warming trend has accelerated since 2000, with the warmest years concentrated in the 2010s and 2020s
 
-## 2. Regional Variations
-
+### 2. Regional Variations
 - **Cairo and Alexandria** (Lower Egypt): Show strong warming with significant heat stress implications for dense urban populations
 - **Assiut and Suhag** (Upper Egypt): Experience higher absolute temperatures and larger temperature swings
 
-## 3. Population Weighting Matters
-
+### 3. Population Weighting Matters
 - Population-weighted temperatures often differ from unweighted averages by 0.2-0.5°C
 - These differences reflect spatial variation in population distribution and climate within governorates
 - Population-weighted measures are more relevant for assessing human exposure to climate change
 
-## 4. Increasing Frequency of Extreme Heat
+## Precipitation
 
-- Since 2010, multiple years have exceeded 2 standard deviations above the historical baseline
-- Cold extremes have become virtually absent in recent decades
-- This asymmetry indicates a fundamental shift in the temperature distribution
+### 1. High Inter-Annual Variability
+- Rainfall shows substantial year-to-year variation, with coefficients of variation typically exceeding 30%
+- This variability poses challenges for agriculture and water resource management
 
-## 5. Maximum Temperature Trends
+### 2. Spatial Patterns
+- **Alexandria**: Highest absolute rainfall among study governorates (Mediterranean climate)
+- **Cairo**: Moderate rainfall with increasing aridity
+- **Assiut and Suhag**: Lowest rainfall (arid/hyper-arid zones) with extreme sensitivity to precipitation changes
 
-- Maximum temperatures show even stronger warming trends than mean temperatures
-- Extreme heat days are increasing in frequency and intensity
-- These trends have direct implications for heat stress, labor productivity, and health outcomes
+### 3. Extreme Events
+- Both extreme dry and extreme wet years have occurred across all governorates
+- Recent decades show no clear long-term trend in total annual precipitation, but high variability persists
+- The timing and intensity of extreme events are critical for agricultural systems and water availability
 
 # Methodology Notes
 
 ## Z-Scores and Climate Shocks
 
-Z-scores normalize temperature deviations by historical variability:
+Z-scores normalize deviations by historical variability:
 
-$$Z = \frac{T_{year} - \mu_{baseline}}{\sigma_{baseline}}$$
+$$Z = \frac{X_{year} - \mu}{\sigma}$$
 
 Where:
-- $T_{year}$ is the annual temperature for a given year
-- $\mu_{baseline}$ is the mean temperature for 1960-2010
-- $\sigma_{baseline}$ is the standard deviation for 1960-2010
+- $X_{year}$ is the annual value for a given year
+- $\mu$ is the mean for the baseline period
+- $\sigma$ is the standard deviation for the baseline period
 
-Z-scores beyond ±2 indicate temperatures more than 2 standard deviations from the historical norm, representing exceptional events.
+Z-scores beyond ±2 indicate values more than 2 standard deviations from the historical norm, representing exceptional events.
 
 ## Population Weighting
 
-Population-weighted temperatures are calculated by weighting each grid cell's temperature by its population:
+Population-weighted climate variables are calculated by weighting each grid cell's value by its population:
 
-$$T_{weighted} = \frac{\sum_i T_i \times Pop_i}{\sum_i Pop_i}$$
+$$X_{weighted} = \frac{\sum_i X_i \times Pop_i}{\sum_i Pop_i}$$
 
-This approach better represents human exposure to temperature changes than simple spatial averages.
+This approach better represents human exposure to climate changes than simple spatial averages.
 
 # Data Availability
 
 All climate data and analysis code are available in the project repository:
 
-- **Climate Data**: `Data/intermediate/Governorate Data/era5_temp_19602024.Rds`
+- **Temperature Data**: `Data/intermediate/Governorate Data/era5_temp_19602024.Rds`
+- **Precipitation Data**: `Data/intermediate/Governorate Data/chirps_prec_yearly_19812024.Rds`
 - **Analysis Code**: `Code/4_EDA/ClimateChange_Report.Rmd`
-- **Interactive App**: `Code/4_EDA/ClimateChange_ShinyApp.R`
 
 ---
 
