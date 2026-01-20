@@ -3,14 +3,13 @@
 #and RA shapefile used in previous work
 # Read in Packages --------------------------------------------------------
 #Define packages used
-libs <- c("tidyverse","here","devtools",
-          "rnaturalearthdata","rnaturalearth","leaflet",
-          "terra","raster","geodata","sf")
+libs <- c("tidyverse","here","rnaturalearthdata","rnaturalearth",
+          "leaflet","terra","geodata","sf")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
 if (any(installed_libs == FALSE)){
-  install.packages(libs[!installed_libs])
+  pak::pkg_install(libs[!installed_libs])
 }
 
 #load libraries

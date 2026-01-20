@@ -3,13 +3,12 @@
 #Build Governorate-level panel data
 # Read in Packages --------------------------------------------------------
 #Define packages used
-libs <- c("tidyverse","naniar","here","devtools",
-          "terra","raster","geodata","sf","exactextractr")
+libs <- c("tidyverse","here","terra","sf")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
 if (any(installed_libs == FALSE)){
-  install.packages(libs[!installed_libs])
+  pak::pkg_install(libs[!installed_libs])
 }
 
 #load libraries
@@ -34,8 +33,7 @@ heatindex_dailymax <- terra::rast(paste(here(),"Data", "intermediate","ERA5",
 names(heatindex_dailymax) <- paste0("hi_max_", names(heatindex_dailymax))
 
 ####Load Mean Heat Index (2000 - 2024)####
-heatindex_dailymean <- terra::rast(paste(here(),"Data", "Temperature","ERA5",
-                                        "Heatindex",
+heatindex_dailymean <- terra::rast(paste(here(),"Data","intermediate","ERA5",
                                         "heatindex_era5_dailymean_20002024.tif",sep = "/"))
 
 #add hi_mean to raster layer names

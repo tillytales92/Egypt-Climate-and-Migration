@@ -2,13 +2,12 @@
 #Data: CHIRPS dataset (daily sum of rainfall)
 # Read in Packages --------------------------------------------------------
 #Define packages used
-libs <- c("tidyverse","naniar","here","devtools",
-          "terra","raster","geodata","sf","exactextractr")
+libs <- c("tidyverse","here","terra","raster","sf","exactextractr")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
 if (any(installed_libs == FALSE)){
-  install.packages(libs[!installed_libs])
+  pak::pkg_install(libs[!installed_libs])
 }
 
 #load libraries
@@ -145,7 +144,7 @@ egypt_df <- egypt_gov |>
 
 ####Including Landscan Pop. weights####
 #USE 2020 pop. raster
-pop_2020 <- raster::raster(paste(here(),"Data","Population",
+pop_2020 <- raster::raster(paste(here(),"Data","raw","Landscan",
                                  "2020_landscan_pop.tif",sep = "/"))
 
 st_crs(prec_chirps_cropped_rasterobject) == st_crs(pop_2020)
@@ -180,7 +179,7 @@ pop_mask <- pop_2020 > 0
 ####Including Cropland####
 #USE cropland raster
 #Here use: MODIS 2021 LandCover
-modis_lc <- raster::raster(paste(here(),"Data","Landcover",
+modis_lc <- raster::raster(paste(here(),"Data","raw","Modis",
                                  "2021_modis_landcover.tif",sep = "/"))
 
 st_crs(prec_chirps_cropped_rasterobject) == st_crs(modis_lc)
@@ -462,13 +461,11 @@ saveRDS(chirps_prec_yearly,file = paste(here(),
                                   "chirps_prec_yearly_19812024",sep = "/"))
 
 #Monthly data
-saveRDS(chirps_prec_monthly,file = paste(here(),"Data",
-                                   "Data","intermediate","Governorate Data",
+saveRDS(chirps_prec_monthly,file = paste(here(),"Data","intermediate","Governorate Data",
                                    "chirps_prec_monthly_19812024",sep = "/"))
 
 #Daily data
-saveRDS(chirps_prec_daily,file = paste(here(),"Data",
-                                    "Data","intermediate","Governorate Data",
+saveRDS(chirps_prec_daily,file = paste(here(),"Data","intermediate","Governorate Data",
                                      "chirps_prec_daily_19812024",sep = "/"))
 
 

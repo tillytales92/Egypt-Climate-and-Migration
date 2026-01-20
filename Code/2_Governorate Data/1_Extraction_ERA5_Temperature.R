@@ -1,13 +1,12 @@
 #Temperature extraction using exactextractr
 # Read in Packages --------------------------------------------------------
 #Define packages used
-libs <- c("tidyverse","naniar","here","devtools",
-          "terra","raster","geodata","sf","exactextractr")
+libs <- c("tidyverse","here","terra","raster","sf","exactextractr")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
 if (any(installed_libs == FALSE)){
-  install.packages(libs[!installed_libs])
+  pak::pkg_install(libs[!installed_libs])
 }
 
 #load libraries
@@ -17,16 +16,16 @@ invisible(lapply(libs,library,character.only = TRUE))
 #Loading the Raster Stack: Data was downloaded in 1_ERA5download
 #NOTE: these are big files!
 #Load Daily mean raster (1960 - 2024)
-temp_era5_dailymean_19602024 <- terra::rast(paste(here(),"Data", "Temperature","ERA5",
-                                  "temp_era5_dailymean_19602024.tif",sep = "/"))
+temp_era5_dailymean_19602024 <- terra::rast(paste(here(),"Data","intermediate","ERA5",
+                                  "temp_era5_dailymean_19602024_cropped_rasterobject.tif",sep = "/"))
 
 #Load Daily max raster (1960 - 2024)
-temp_era5_dailymax_19602024 <- terra::rast(paste(here(),"Data", "Temperature","ERA5",
-                                  "temp_era5_dailymax_19602024.tif",sep = "/"))
+temp_era5_dailymax_19602024 <- terra::rast(paste(here(),"Data","intermediate","ERA5",
+                                  "temp_era5_dailymax_19602024_cropped_rasterobject.tif",sep = "/"))
 
 #Load Daily min raster (1961 - 2024)
-temp_era5_dailymin_19612024 <- terra::rast(paste(here(),"Data", "Temperature","ERA5",
-                                  "temp_era5_dailymin_19612024.tif",sep = "/"))
+temp_era5_dailymin_19612024 <- terra::rast(paste(here(),"Data","intermediate","ERA5",
+                                  "temp_era5_dailymin_19612024_cropped_rasterobject.tif",sep = "/"))
 
 ####Load Shapefile and reproject####
 #HDX shapefile:see(https://data.humdata.org/dataset/cod-ab-egy)

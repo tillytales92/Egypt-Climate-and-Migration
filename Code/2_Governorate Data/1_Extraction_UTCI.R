@@ -3,13 +3,12 @@
 #Build raster stacks from daily raster files
 # Read in Packages --------------------------------------------------------
 #Define packages used
-libs <- c("tidyverse","naniar","here","devtools",
-          "terra","raster","geodata","sf","exactextractr")
+libs <- c("tidyverse","here","terra","sf")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
 if (any(installed_libs == FALSE)){
-  install.packages(libs[!installed_libs])
+  pak::pkg_install(libs[!installed_libs])
 }
 
 #load libraries
@@ -18,7 +17,7 @@ invisible(lapply(libs,library,character.only = TRUE))
 # Load Shapefiles ---------------------------------------------------------
 #HDX shapefile:see(https://data.humdata.org/dataset/cod-ab-egy)
 egypt_hdx <- st_read(paste(here(),
-                           "Data","Shapefiles","HDX_Egypt",
+                           "Data","raw","Shapefiles","HDX_Egypt",
                            "egy_admbnda_adm1_capmas_20170421.shp",sep = "/"))
 
 #Select relevant governorates
@@ -57,7 +56,7 @@ utci_govs_long <- utci_govs |>
   mutate(
     date = as.Date(sub("^utci_", "", date))
   ) |>
-  arrange
+  arrange(ADM1_EN, date)
 
 #Saving Gov. panel data --------------------------------------------------
 #Panel Data
