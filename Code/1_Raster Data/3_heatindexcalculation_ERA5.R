@@ -1,9 +1,7 @@
 #Combine Temperature and Dew point temperature rasters
 # Read in Packages --------------------------------------------------------
 #Define packages used
-libs <- c("tidyverse","naniar","here","devtools","lubridate",
-          "terra","raster","geodata","sf","exactextractr",
-          "patchwork","weathermetrics")
+libs <- c("tidyverse","here","lubridate","terra","weathermetrics","skimr")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())

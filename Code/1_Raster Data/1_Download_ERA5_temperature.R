@@ -8,10 +8,7 @@
 
 # Read in Packages --------------------------------------------------------
 #Define packages used
-libs <- c("tidyverse","naniar","here","devtools",
-          "terra","raster","sf","cowplot","ggmap",
-          "gimms","rnaturalearthdata","mapview",
-          "KrigR","leaflet")
+libs <- c("here","sf","KrigR")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
@@ -46,7 +43,7 @@ egypt_temp_1950_decade_daily <- CDownloadS(
   #FUN = "mean",#mean daily value
   TStep = 1,#how many time-steps to aggregate into one layer of data each
   Extent = egypt_hdx, # the spatial preference we are after
-  Dir = paste(here(),"Data","ERA5",sep = "/"), # where to store the downloaded data
+  Dir = paste(here(),"Data","raw","ERA5",sep = "/"), # where to store the downloaded data
   FileExtension = ".tif",
   FileName = "egypt_era_temp_1950_decade", # a name for our downloaded file
   API_User = API_User, # your API User Number
@@ -67,7 +64,7 @@ egypt_temp_daily_max <- CDownloadS(
   FUN = "max",#max daily value
   TStep = 1,#how many time-steps to aggregate into one layer of data each
   Extent = egypt_hdx, # the spatial preference we are after
-  Dir = paste(here(),"Data","Temperature","ERA5",
+  Dir = paste(here(),"Data","raw","ERA5",
               sep = "/"), # where to store the downloaded data
   FileExtension = ".tif",
   FileName = "era5_MaxTemp_1960_1979", # a name for our downloaded file

@@ -1,8 +1,7 @@
 #Temperature extraction using exactextractr
 # Read in Packages --------------------------------------------------------
 #Define packages used
-libs <- c("tidyverse","naniar","here","devtools",
-          "terra","raster","geodata","sf","exactextractr")
+libs <- c("here","terra","raster","sf","exactextractr")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
@@ -15,7 +14,7 @@ invisible(lapply(libs,library,character.only = TRUE))
 
 # Load Data ----------------------------------------------------------------
 #Loading the Raster Stack: Data was downloaded in 1_ERA5download
-egypt_temp_2010decade <- raster::stack(paste(here(),"Data", "ERA5",
+egypt_temp_2010decade <- raster::stack(paste(here(),"Data","raw","ERA5",
                                              "egypt_era_temp_2010decade.tif",sep = "/"))
 
 #select year 2010 only
@@ -24,7 +23,7 @@ egypt_temp_2010 <- egypt_temp_2010decade[[1:100]]
 #shapefile
 #HDX shapefile:see(https://data.humdata.org/dataset/cod-ab-egy)
 egypt_hdx <- st_read(paste(here(),
-                           "Data","Shapefiles","HDX_Egypt",
+                           "Data","raw","Shapefiles","HDX_Egypt",
                            "egy_admbnda_adm1_capmas_20170421.shp",sep = "/"))
 
 # Check CRS
@@ -70,7 +69,7 @@ temp_2010_mask <- clusterR(temp_2010_crop, fun = mask, args = list(mask = egypt_
 endCluster()
 
 #####Approach 3: use terra
-egypt_temp_2010decade_terra <- terra::rast(paste(here(),"Data", "ERA5",
+egypt_temp_2010decade_terra <- terra::rast(paste(here(),"Data","raw","ERA5",
                                              "egypt_era_temp_2010decade.tif",sep = "/"))
 
 #select year 2010 only
@@ -89,13 +88,14 @@ plot(egypt_temp_2010_terra_crop[[1]]-273.15)#transform kelvin to celsius
 plot(st_geometry(egypt_gov), add = TRUE, border = "red")
 
 #exactextract
+# Note: This example requires egypt_df and pop_2015_resamp to be defined
 # Compute mean temp. & population-weighted mean temperature
-egypt <- cbind(
-  egypt_df,
-  exact_extract(
-    egypt_temp_2010_terra_crop - 273.15,   # temperature raster (in °C)
-    egypt_gov,             # polygons
-    fun = c("mean", "weighted_mean"),# both statistics
-    weights = pop_2015_resamp        # population raster, resampled to match
-  )
-)
+# egypt <- cbind(
+#   egypt_df,
+#   exact_extract(
+#     egypt_temp_2010_terra_crop - 273.15,   # temperature raster (in °C)
+#     egypt_gov,             # polygons
+#     fun = c("mean", "weighted_mean"),# both statistics
+#     weights = pop_2015_resamp        # population raster, resampled to match
+#   )
+# )

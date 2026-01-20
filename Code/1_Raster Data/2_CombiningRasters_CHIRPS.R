@@ -1,5 +1,6 @@
-libs <- c("tidyverse","naniar","here","devtools",
-          "terra","raster","geodata","sf","exactextractr")
+# Read in Packages --------------------------------------------------------
+#Define packages used
+libs <- c("here","terra")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())

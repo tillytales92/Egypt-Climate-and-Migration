@@ -1,8 +1,7 @@
 #Combining ERA 5 Temperature Rasters for different decades
 # Read in Packages --------------------------------------------------------
 #Define packages used
-libs <- c("tidyverse","naniar","here","devtools",
-          "terra","raster","geodata","sf","exactextractr")
+libs <- c("here","terra")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())

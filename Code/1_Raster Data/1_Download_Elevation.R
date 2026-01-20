@@ -3,21 +3,19 @@
 #see here:https://github.com/tilezen/joerd/blob/master/docs/data-sources.md#what-is-the-ground-resolution
 # Import libraries --------------------------------------------------------
 # libraries we need
-libs <- c("elevatr", "terra", "tidyverse","here",
-          "sf", "giscoR", "marmap","haven")
+libs <- c("elevatr","raster","here","sf")
 
 #elevatr allows access to several web services in search of raster elevation data
 #includes Amazon Web Services Terrian Tiles and Open Topography global datasets API
-#marmap provides a nice colour palette for topography
 
 # install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
-if (any(installed_libs == F)) {
-  install.packages(libs[!installed_libs])
+if (any(installed_libs == FALSE)) {
+  pak::pkg_install(libs[!installed_libs])
 }
 
 # load libraries
-invisible(lapply(libs, library, character.only = T))
+invisible(lapply(libs, library, character.only = TRUE))
 
 ####Load Shapefile and reproject####
 #HDX shapefile:see(https://data.humdata.org/dataset/cod-ab-egy)
