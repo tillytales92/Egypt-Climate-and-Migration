@@ -7,13 +7,12 @@
 #Data was extracted through GEE
 #Read in Packages --------------------------------------------------------
 #Define packages used
-libs <- c("tidyverse","naniar","here","devtools",
-          "terra","raster","geodata","sf","exactextractr")
+libs <- c("tidyverse","here")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
 if (any(installed_libs == FALSE)){
-  install.packages(libs[!installed_libs])
+  pak::pkg_install(libs[!installed_libs])
 }
 
 #load libraries
@@ -22,7 +21,7 @@ invisible(lapply(libs,library,character.only = TRUE))
 # Read Data ------------------------------------------------------------
 #Cropland NDVI
 #Load NDVI & EVI Data (Vegetation Indices)
-ndvi_cop19 <- read_csv(file = paste(here(),"Data","Drought Indices","NDVI",
+ndvi_cop19 <- read_csv(file = paste(here(),"Data","raw","NDVI",
         "NDVI_EVI_timeseries_Copernicus2019_cropland_2001_2024_fullsample.csv",sep = "/")) |>
   dplyr::select(-c(`system:index`,.geo,source)) |>
   #date columns

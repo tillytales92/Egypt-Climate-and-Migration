@@ -1,13 +1,12 @@
 #Temperature extraction using exactextractr
 # Read in Packages --------------------------------------------------------
 #Define packages used
-libs <- c("tidyverse","naniar","here","devtools",
-          "terra","raster","geodata","sf","exactextractr")
+libs <- c("tidyverse","here","terra","sf")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
 if (any(installed_libs == FALSE)){
-  install.packages(libs[!installed_libs])
+  pak::pkg_install(libs[!installed_libs])
 }
 
 #load libraries
@@ -33,12 +32,12 @@ temp_era5_dailymin_19612024 <- terra::rast(paste(here(),
 #Load Mean Heat Index (2000 - 2024)
 heatindex_dailymean <- terra::rast(paste(here(),
                                 "Data","intermediate","ERA5",
-                                "heatindex_dailymean_2000_2024.tif",sep = "/"))
+                                "heatindex_era5_dailymean_20002024.tif",sep = "/"))
 
 #Load Max. Heat Index (2000 - 2024)
 heatindex_dailymax <- terra::rast(paste(here(),
                                 "Data","intermediate","ERA5",
-                                "heatindex_dailymax_2000_2024.tif",sep = "/"))
+                                "heatindex_era5_dailymax_20002024.tif",sep = "/"))
 
 #Load Max. UTCI (2000 - 2024)
 utci_daily_max_rast <- terra::rast(paste(here(),

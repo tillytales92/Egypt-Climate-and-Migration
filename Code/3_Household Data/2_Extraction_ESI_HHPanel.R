@@ -4,13 +4,12 @@
 #values for all years
 #Read in Packages --------------------------------------------------------
 #Define packages used
-libs <- c("tidyverse","naniar","here","devtools",
-          "terra","raster","geodata","sf","exactextractr")
+libs <- c("tidyverse","naniar","here")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
 if (any(installed_libs == FALSE)){
-  install.packages(libs[!installed_libs])
+  pak::pkg_install(libs[!installed_libs])
 }
 
 #load libraries

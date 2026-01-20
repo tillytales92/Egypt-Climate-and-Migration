@@ -1,17 +1,16 @@
 #Impute Household GPS information where missing
 #Import libraries --------------------------------------------------------
 # libraries we need
-libs <- c("terra", "tidyverse","here","sf",
-          "haven","naniar","leaflet")
+libs <- c("tidyverse","here","sf","haven","naniar","skimr")
 
 # install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
-if (any(installed_libs == F)) {
-  install.packages(libs[!installed_libs])
+if (any(installed_libs == FALSE)) {
+  pak::pkg_install(libs[!installed_libs])
 }
 
 # load libraries
-invisible(lapply(libs, library, character.only = T))
+invisible(lapply(libs, library, character.only = TRUE))
 
 ####Load Shapefile and reproject####
 #HDX shapefile:see(https://data.humdata.org/dataset/cod-ab-egy)

@@ -3,15 +3,12 @@
 #Requires API Key and costs money depending on number of requests
 #Read in Packages ----------------------------------------------
 #Define packages used
-libs <- c(
-  "tidyverse","naniar","here","terra","raster","sf",
-  "leaflet","rvest","fuzzyjoin","ggmap","tibble",
-  "googleway","osrm","RColorBrewer","haven")
+libs <- c("tidyverse","here","sf","leaflet","googleway","RColorBrewer")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
 if (any(installed_libs == FALSE)){
-  install.packages(libs[!installed_libs])
+  pak::pkg_install(libs[!installed_libs])
 }
 
 #load libraries

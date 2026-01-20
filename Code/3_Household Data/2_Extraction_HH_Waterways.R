@@ -1,14 +1,12 @@
 #Rivers and Waterways Data
 # Read in Packages --------------------------------------------------------
 #Define packages used
-libs <- c("tidyverse","naniar","haven","here","devtools","ggmap",
-          "terra","raster","geodata","sf","exactextractr",
-          "tmap","leaflet","patchwork","tools")
+libs <- c("tidyverse","here","sf","leaflet","RColorBrewer")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
 if (any(installed_libs == FALSE)){
-  install.packages(libs[!installed_libs])
+  pak::pkg_install(libs[!installed_libs])
 }
 
 #load libraries

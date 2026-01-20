@@ -1,18 +1,17 @@
 #Extract elevation and slope data for HH Sample (with imputed GPS)
-#Elevation Raster Data was downloaded in "2_Extraction_Elevation"
+#Elevation Raster Data was downloaded in "1_Download_Elevation"
 # Import libraries --------------------------------------------------------
 # libraries we need
-libs <- c("elevatr", "terra", "tidyverse","here",
-          "sf", "giscoR", "marmap","haven")
+libs <- c("terra","raster","tidyverse","here","sf")
 
 # install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
-if (any(installed_libs == F)) {
-  install.packages(libs[!installed_libs])
+if (any(installed_libs == FALSE)) {
+  pak::pkg_install(libs[!installed_libs])
 }
 
 # load libraries
-invisible(lapply(libs, library, character.only = T))
+invisible(lapply(libs, library, character.only = TRUE))
 
 # Load Data ---------------------------------------------------------------
 ####Households####
