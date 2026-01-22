@@ -3,6 +3,7 @@
 #follow this course:https://www.erikkusch.com/courses/krigr/prep/
 #Caution: Downloading the data this way takes a very long time which is why I split it up in chunks
 #I found downloading the data through Google Earth Engine substantially faster
+#see script "1_Download_ERA5_RGEE" for that
 #Install dev. version of KrigR
 #devtools::install_github("https://github.com/ErikKusch/KrigR", ref = "Development")
 
