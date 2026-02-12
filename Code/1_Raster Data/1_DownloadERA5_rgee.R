@@ -33,7 +33,7 @@ p_load(rgee,geojsonio,remotes,devtools)
 
 #authenticate and initialize rgee
 # ee_install(py_env = "rgee_py")
-# rgee::ee_Authenticate()
+rgee::ee_Authenticate()
 
 # Initialise rgee ---------------------------------------------------------
 rgee::ee_Initialize(drive = TRUE)
@@ -65,6 +65,7 @@ egypt_gov_ee <- sf_as_ee(egypt_gov)
 govs_geometry <- egypt_gov_ee$geometry()
 
 # Create ImageCollection
+#adjust date and geometry as needed, and select relevant variables
 ic <- ee$ImageCollection('ECMWF/ERA5_LAND/HOURLY')$
   filterDate('1992-10-05', '1992-10-06')$
   filterBounds(govs_geometry)$
@@ -73,7 +74,9 @@ ic <- ee$ImageCollection('ECMWF/ERA5_LAND/HOURLY')$
          # 'u_component_of_wind_10m',
          # 'v_component_of_wind_10m')
 
-# Download as raster
+#Download as raster
+#this starts the Task of downloading the data, which can be monitored in the GEE Tasks tab
+#data is then saved on Google Drive, from where it can be downloaded locally egypt_temp_2m_r
 ds <- ee_as_rast(
   image = ic$toBands(),
   region = govs_geometry,
@@ -83,14 +86,16 @@ ds <- ee_as_rast(
   container = "egypt_era5_data",
   lazy = TRUE)
 
-#load into raw data folder
+#load data onto local raw data folder
 # Download Sheet as csv, explicit type
 googledrive::drive_download(
   file = "egypt_era5_data/noid_image_2026_01_22_09_49_50.tif",
   path = paste(here(),
                "Data","raw","ERA5","temp2m_test.tif",sep = "/"))
 
-#load into R
+#load into R with terra package
+egypt_temp_2m <- terra::rast(paste(here(), "Data","raw","ERA5","temp2m_test.tif",sep = "/"))
+
 names_vec <- names(egypt_temp_2m)
 datetime_str <- str_extract(names_vec, "\\d{8}T\\d{2}")
 datetime <- ymd_h(datetime_str)
