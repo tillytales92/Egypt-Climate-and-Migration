@@ -1,6 +1,6 @@
 ---
 title: "Climate Change in Egypt: Temperature and Precipitation Trends"
-author: "Egypt Climate and Migration Project"
+author: "Till Meissner"
 date: "`r Sys.Date()`"
 output:
   html_document:
@@ -24,7 +24,7 @@ knitr::opts_chunk$set(
 
 # Executive Summary
 
-This report analyzes temperature and precipitation trends across Egyptian governorates using ERA5 (1960-2024) and CHIRPS (1981-2024) data. Key findings include:
+This report analyzes temperature and precipitation trends across Egyptian governorates using ERA5 (1960-2024) and CHIRPS (1981-2024)data. Key findings include:
 
 - **Warming Trend**: All governorates show clear warming trends, with temperatures increasing 1.5-2.5°C since 1960
 - **Recent Acceleration**: Temperature deviations from the 1960-2010 baseline have intensified since 2010
