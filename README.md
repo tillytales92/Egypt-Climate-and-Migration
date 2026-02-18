@@ -1,6 +1,6 @@
 # Egypt Climate and Migration
 
-This repository shows the data work for a climate and migration research project for the STEG (Structural Transformation and Economic Growth) initiative, focusing on "Migration in the Face of Climate Change: Assessing the Potential of Ultra-Poor Graduation Programs" in Upper Egypt. The work encompasses data acquisition, processing, and aggregation of climate variables at both governorate and household levels to enable a rigorous analysis of climate vulnerability and its relationship to migration decisions.
+This repository shows the data work for a climate and migration research project for the STEG (Structural Transformation and Economic Growth) initiative, focusing on "Migration in the Face of Climate Change: Assessing the Potential of Ultra-Poor Graduation Programs" in Upper Egypt. The work encompasses data acquisition, processing, and aggregation of climate variables at both governorate and household levels to enable a rigorous analysis of climate vulnerability and its relationship to migration decisions. See WorkDocumentation.pdf for a more detailed background on the project.
 
 ## Project Overview
 
