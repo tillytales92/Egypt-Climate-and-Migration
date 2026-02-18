@@ -1,10 +1,10 @@
 # Egypt Climate and Migration
 
-This is a climate and migration research project for the STEG (Structural Transformation and Economic Growth) initiative, focusing on "Migration in the Face of Climate Change: Assessing the Potential of Ultra-Poor Graduation Programs" in Upper Egypt.
+This repository shows the data work for a climate and migration research project for the STEG (Structural Transformation and Economic Growth) initiative, focusing on "Migration in the Face of Climate Change: Assessing the Potential of Ultra-Poor Graduation Programs" in Upper Egypt. The work encompasses data acquisition, processing, and aggregation of climate variables at both governorate and household levels to enable a rigorous analysis of climate vulnerability and its relationship to migration decisions.
 
 ## Project Overview
 
-The project analyzes climate vulnerability and stress in the Assiut and Suhag governorates of Upper Egypt by combining:
+The project analyses climate vulnerability and stress in the Assiut and Suhag governorates of Upper Egypt by combining:
 
 - **Satellite climate data** (1960-2024): Temperature, heat indices, precipitation, drought indicators
 - **Household survey data**: Primary survey data from households in Assiut and Suhag
@@ -63,7 +63,7 @@ Within each folder, scripts use numbered prefixes indicating their processing st
 **4_EDA/**
 - Time series visualizations (temperature, precipitation, drought)
 - Spatial mapping of climate variables
-- Interactive Shiny applications for data exploration
+- Interactive Shiny application for data exploration
 - RMarkdown reports for climate change analysis
 
 ### Data Directory
@@ -104,19 +104,19 @@ The project follows a strict sequential workflow:
    ↓
 3. Process Household Surveys & Extract Climate Exposure (3_Household Data)
    ↓
-4. Analyze, Visualize, and Report (4_EDA)
+4. Analyse, Visualize, and Report (4_EDA)
 ```
 
 ### Key Outputs
 
 - **Governorate-level datasets**: Climate time series for all Egyptian governorates (1960-2024)
 - **Household-level datasets**: Survey data merged with climate exposure variables
-- **Visualizations**: Interactive Shiny apps and RMarkdown reports
+- **Visualizations**: Interactive Shiny app and RMarkdown reports
 - **Climate indices**: Composite measures of heat stress, drought stress, and overall climate vulnerability
 
 ## Climate Variables
 
-The project analyzes multiple climate indicators:
+The project analyses multiple climate indicators:
 
 ### Temperature
 - Daily mean, maximum, and minimum temperature (ERA5, 1960-2024)
@@ -188,5 +188,4 @@ Follow the sequential folder structure:
 ## Contact
 
 This project is part of the STEG research initiative studying climate-induced migration and the effectiveness of ultra-poor graduation programs in climate-vulnerable regions.
-
 For questions about the code or methodology, refer to the inline documentation in individual scripts or consult CLAUDE.md for technical details.
