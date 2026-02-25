@@ -17,24 +17,23 @@ invisible(lapply(libs,library,character.only = TRUE))
 # Read Data ---------------------------------------------------------------
 #Load ESI data
 #ESI 12 week timeseries (2001 - 2024)
-esi_12week <- read_csv(file = paste(here(),"Data","Drought Indices","ESI",
+esi_12week <- read_csv(file = paste(here(),"Data","raw","ESI",
                                 "ESI_timeseries_Suhag_Assiut_12week.csv",sep = "/")) |>
   dplyr::select(-c(`system:index`,.geo)) |>
-  #date columns
   mutate(year = year(date),
-         month = month(date),
-         day = day(date),
-         m_name = month(date, label = TRUE, abbr = TRUE))
+       month = month(date),
+       day = day(date),
+       m_name = month.abb[month])
 
 #ESI 4 week timeseries (2001 - 2024)
-esi_4week <- read_csv(file = paste(here(),"Data","Drought Indices","ESI",
+esi_4week <- read_csv(file = paste(here(),"Data","raw","ESI",
                                     "ESI_timeseries_Suhag_Assiut_4week.csv",sep = "/")) |>
   dplyr::select(-c(`system:index`,.geo)) |>
   #date columns
   mutate(year = year(date),
          month = month(date),
          day = day(date),
-         m_name = month(date, label = TRUE, abbr = TRUE))
+         m_name = month.abb[month])
 
 # ESI 4 weeks plot --------------------------------------------------------
 #base plot ESI 4 weeks

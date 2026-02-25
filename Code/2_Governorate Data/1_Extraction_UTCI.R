@@ -20,9 +20,8 @@ egypt_hdx <- st_read(paste(here(),
                            "Data","raw","Shapefiles","HDX_Egypt",
                            "egy_admbnda_adm1_capmas_20170421.shp",sep = "/"))
 
-#Select relevant governorates
-egypt_gov <- egypt_hdx |>
-  filter(ADM1_EN %in% c("Assiut","Suhag" ,"Alexandria","Cairo"))
+#egypt gov
+egypt_gov <- egypt_hdx
 
 #Load Climate Data Rasters------------------------------------------------
 utci_daily_max_rast <- terra::rast(paste(here(),"Data", "intermediate","UTCI",

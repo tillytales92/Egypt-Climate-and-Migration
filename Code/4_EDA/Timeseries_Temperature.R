@@ -3,7 +3,7 @@
 # Read in Packages --------------------------------------------------------
 #Define packages used
 libs <- c("tidyverse","naniar","here","devtools",
-          "lubridate","patchwork","zoo")
+          "lubridate","patchwork","zoo","data.table")
 
 #install missing libraries
 installed_libs <- libs %in% rownames(installed.packages())
@@ -18,7 +18,7 @@ invisible(lapply(libs,library,character.only = TRUE))
 #Load temp. data for Alexandria, Cairo, Assiut and Sohag
 era5_temp_df <- readRDS(file = paste(here(),"Data",
                                      "intermediate","Governorate Data",
-                                     "era5_temp_19602024",sep = "/"))
+                                     "era5_temp_19602024.Rds",sep = "/"))
 
 ####Create annual data####
 era5_temp_annual <-  era5_temp_df |>
@@ -486,15 +486,6 @@ era5_temp_seasonal |>
     panel.grid.minor.x = element_blank()
   )
 
-#####Average Max. Temp.#####
-
-
-
-
-#####Average Min. Temp.#####
-
-
-
 ####Daily Measures####
 ####Avg. temp above 30 degrees ####
 #days where weighted mean above 30 degrees
@@ -830,7 +821,7 @@ ggplot(heatwave_stats_long,
     ~metric,
     scales = "free_y",
     ncol = 2,
-    switch = "y",   # move facet labels to y-axis side
+    strip.position = "left",   # move facet labels to y-axis side
     labeller = as_labeller(c(
       frequency      = "Frequency (# heatwaves)",
       mean_duration  = "Mean Duration (days)",

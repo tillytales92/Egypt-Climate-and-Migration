@@ -59,9 +59,7 @@ plot(st_geometry(egypt_hdx), add = TRUE, border = "red")
 #all adds up!
 
 ####Cropping to Governorates and adj. layer names####
-#Selecting Assiut, Suhag, Alexandria and Cairo from shapefile
-egypt_gov <- egypt_hdx_proj |>
-  filter(ADM1_EN %in% c("Assiut","Suhag" ,"Alexandria","Cairo"))
+egypt_gov <- egypt_hdx_proj
 
 #####Daily Mean#####
 #crop and mask raster to Assiut and Suhag governorates using terra

@@ -1,0 +1,692 @@
+---
+title: "Climate Change in Egypt: Temperature, Precipitation and Drought Trends"
+author: "Till Meissner"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: flatly
+    code_folding: hide
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 10,
+  fig.height = 7
+)
+```
+
+```{r load-packages, echo = FALSE,include = FALSE}
+libs <- c("tidyverse", "here", "lubridate", "plotly","sf",
+          "scales", "knitr", "DT","patchwork","leaflet","terra")
+
+installed_libs <- libs %in% rownames(installed.packages())
+if (any(installed_libs == FALSE)) {
+  pak::pkg_install(libs[!installed_libs])
+}
+
+invisible(lapply(libs, library, character.only = TRUE))
+
+```
+
+```{r load-data, echo = FALSE, include = FALSE}
+#define key govs
+key_govs <- c("Cairo", "Alexandria", "Assiut", "Suhag")
+
+#Egypt shapefile
+egypt_hdx <- st_read(paste(here(),
+                           "Data","raw","Shapefiles","HDX_Egypt",
+                           "egy_admbnda_adm1_capmas_20170421.shp",sep = "/"))
+
+#select govs.
+egypt_4gov <- egypt_hdx |>
+  filter(ADM1_EN %in% c("Assiut","Suhag","Cairo","Alexandria"))
+
+#pop. raster
+#Load 2020 pop. raster df
+pop_2020_cropped_df <- readRDS(file = paste(here(),"Data","intermediate","Landscan",
+                                            "pop_2020_cropped_df.Rds",sep = "/"))
+
+#Load 2020 raster object
+pop_2020_cropped <- terra::rast(
+                   paste(here(), "Data", "intermediate", "Landscan",
+                                    "pop_2020_cropped.tif", sep = "/"))
+
+#cropland raster
+#Load 2021 cropland raster df
+crop_2021_cropped_df <- readRDS(file = paste(here(),"Data","intermediate","Modis",
+                                            "cropland_2021_cropped_df.Rds",sep = "/"))
+
+#Load 2021 raster object
+crop_2021_cropped_cat <- terra::rast(
+                   paste(here(), "Data", "intermediate","Modis",
+                                    "cropland_2021_cropped_cat.tif", sep = "/"))
+
+
+#Load temperature data
+era5_temp_df <- readRDS(file = paste(here(), "Data", "intermediate",
+                                     "Governorate Data",
+                                     "era5_temp_19602024.Rds", sep = "/"))
+
+#Load annual temperature data
+era5_temp_annual <- readRDS(file = paste(here(),"Data","final",
+                                   "era5_temp_annual.Rds",sep = "/"))
+
+#Load heatwave dataset
+heatwave_stats_long <- readRDS(file = paste(here(),"Data","final",
+                                    "heatwave_stats_long.Rds",sep ="/"))
+
+#Load heat index and utci data
+heatindex_govs <- readRDS(file = paste(here(),
+                                       "Data","intermediate","Governorate Data",
+                                       "heatindex_govpanel_20002024.Rds",sep = "/"))
+
+#Load UTCI Data
+utci_govs <- readRDS(file = paste(here(),
+                                       "Data", "intermediate","Governorate Data",
+                                       "utci_govpanel_20002024.Rds",sep = "/"))
+
+#Join all together
+temp_joined <- era5_temp_df |>
+  left_join(heatindex_govs, by = c("name" = "ADM1_EN","date")) |>
+  left_join(utci_govs,by = c("name" = "ADM1_EN","date"))
+
+
+#chirps rainfall data
+chirps_yearly <- readRDS(file = paste(here(),"Data","intermediate",
+                                      "Governorate Data","chirps_prec_yearly_19812024",
+                                      sep = "/"))
+
+#ESI
+esi_12week <- read_csv(file = paste(here(),"Data","raw","ESI",
+                                "ESI_timeseries_Suhag_Assiut_12week.csv",sep = "/")) |>
+  dplyr::select(-c(`system:index`,.geo)) |>
+  mutate(year = year(date),
+       month = month(date),
+       day = day(date),
+       m_name = month.abb[month])
+
+```
+
+# Executive Summary
+
+This report analyses temperature and precipitation trends across four Egyptian governorates using ERA5 (1960-2024) and CHIRPS (1981-2024) data as well as remotely sensed data on drought conditions (ESI and NDVI). Key findings include:
+
+- **Warming Trend**: All governorates show clear warming trends, with average temperatures increasing 1.5-2.5°C since 1960. Heat waves have become more common and increased in intensity and length. The number of tropical nights (minimum temperature above 20° Celsius) and hot winter days (maximum temperature above 30° C) has substantially increased, posing a threat to human well-being and plant productivity.
+- **Recent Acceleration**: Temperature deviations from the 1960-2010 baseline have intensified since 2010.
+- **Precipitation Variability**: Rainfall patterns show high inter-annual variability with notable extreme dry and wet years.
+- **Regional Variation**: Both temperature and precipitation changes vary across governorates.
+
+# Data and Methods
+
+## Data Sources
+
+- **Temperature Data**: ERA5 reanalysis (1960-2024) at daily resolution.
+- **Precipitation Data**: CHIRPS (1981-2024) at daily resolution.
+- **Agricultural Drought**: Remotely sensed data indicating vegetative stress (ESI, NDVI, EVI).
+- **Population Data**: LandScan population distribution (2020).
+- **Baseline Period**: 1960-2010 for temperature; 1981-2024 mean for precipitation.
+
+## Weighting Methods
+
+1. **Unweighted**: Simple spatial average across each governorate.
+2. **Population-weighted**: Weighted by where people actually live within each governorate.,
+
+Population weighting provides a more accurate representation of human exposure to climate changes.
+
+# Population and Cropland Distribution
+
+```{r leaflet-population}
+#population palette
+pal_pop <- colorNumeric(
+  palette = "viridis",
+  domain = log10(pop_2020_cropped_df$b1 + 1),
+  na.color = "transparent")
+
+#cropland palette
+pal_crop <- colorFactor(
+  palette = c("gray90", "#238b45"),
+  levels = c("Other land use", "Cropland"),
+  na.color = "transparent"
+)
+
+#leaflet map
+leaflet() |>
+  addProviderTiles(providers$CartoDB.Positron) |>
+  addRasterImage(
+    log10(pop_2020_cropped + 1),
+    colors = pal_pop,
+    opacity = 0.8,
+    project = TRUE,
+    group = "Population") |>
+  addRasterImage(
+    crop_2021_cropped_cat,
+    colors = pal_crop,
+    opacity = 0.8,
+    project = TRUE,
+    group = "Cropland") |>
+  addPolygons(
+    data = egypt_4gov,
+    fill = FALSE,
+    color = "black",
+    weight = 1.5,
+    label = ~ADM1_EN) |>
+  addLegend(
+    pal = pal_pop,
+    values = values(log10(pop_2020_cropped + 1)),
+    title = "Population (log scale)",
+    labFormat = labelFormat(
+      transform = function(x) round(10^x)),
+    group = "Population"
+  ) |>
+  addLegend(
+    pal = pal_crop,
+    values = values(crop_2021_cropped_cat),
+    title = "Land Use",
+    group = "Cropland") |>
+  addLayersControl(baseGroups = c("Population", "Cropland"),
+                    options = layersControlOptions(collapsed = FALSE))
+
+```
+
+# Temperature Trends by Governorate
+
+## Temperature Statistics by Governorate
+
+```{r summary-table-temp}
+summary_stats_temp <- era5_temp_annual |>
+  filter(name %in% key_govs) |>
+  group_by(name) |>
+  summarise(
+    `Mean (°C)` = round(mean(annual_mean_temp_pop, na.rm = TRUE), 2),
+    `Max (°C)` = round(mean(annual_mean_maxtemp_pop, na.rm = TRUE), 2),
+    `Min (°C)` = round(mean(annual_mean_mintemp_pop, na.rm = TRUE), 2),
+    `Warming Trend (°C)` = round(
+      coef(lm(annual_mean_temp_pop ~ year))[2] * (max(year) - min(year)), 2
+    ),
+    `Recent Decade Mean (2015-2024)` = round(
+      mean(annual_mean_temp_pop[year >= 2015], na.rm = TRUE), 2
+    ),
+    .groups = "drop"
+  ) |>
+  rename(Governorate = name)
+
+datatable(
+  summary_stats_temp,
+  options = list(pageLength = 10, dom = 't'),
+  caption = "Temperature statistics for 1960-2024. Warming trend shows total temperature increase over the period."
+)
+```
+
+## Annual Mean Temperature Deviations (Population-Weighted)
+
+The plot below shows how mean temperatures have deviated from the 1960-2010 baseline for major governorates. Red bars indicate years warmer than the baseline, while blue bars indicate cooler years.
+
+```{r plot-mean-deviation}
+p_mean_dev <- era5_temp_annual |>
+  filter(name %in% key_govs) |>
+  ggplot(aes(x = year, y = temp_diff_mean_pop, fill = temp_diff_mean_pop)) +
+  geom_col(color = "NA", width = 0.8, alpha = 0.9) +
+  facet_wrap(~name, ncol = 2) +
+  scale_fill_gradient2(
+    low = "#0571b0", mid = "white", high = "#ca0020",
+    midpoint = 0, name = "Deviation (°C)"
+  ) +
+  scale_x_continuous(breaks = seq(1960, 2024, by = 10)) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Mean Temperature - Deviation from Baseline (Population-weighted)",
+    subtitle = "Relative to 1960-2010 average - ERA5 data",
+    x = "Year", y = "Temperature Deviation (°C)"
+  ) +
+  theme(
+    legend.position = "bottom",
+    strip.background = element_rect(fill = "lightgray", color = NA),
+    strip.text = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+ggplotly(p_mean_dev, tooltip = c("x", "y")) |>
+  layout(hovermode = "closest")
+```
+
+## Heat waves
+
+```{r barplot-heatwaves}
+#patchwork
+#subset for clarity
+df_sub <- heatwave_stats_long |>
+  filter(name %in% c("Assiut", "Suhag"))
+
+# Common theme modification
+axis_theme <- theme(
+  axis.text.x  = element_text(angle = 45, hjust = 1, size = 8),
+  axis.title.x = element_text(size = 9),
+  axis.title.y = element_text(size = 9)
+)
+
+# (recreate p1..p4 but include axis_theme in each)
+p1 <- df_sub |>
+  filter(metric == "frequency") |>
+  ggplot(aes(x = factor(decade), y = value, fill = name)) +
+  geom_col(position = "dodge") +
+  labs(title = "Heat Wave Frequency",
+       x = "Decade", y = "Average number of\n heat waves per year",
+       fill = "Governorate") +
+  theme_minimal() + axis_theme
+
+p2 <- df_sub |>
+  filter(metric == "mean_duration") |>
+  ggplot(aes(x = factor(decade), y = value, fill = name)) +
+  geom_col(position = "dodge") +
+  labs(title = "Heat Wave Duration",
+       x = "Decade", y = "Average length of\n individual heat waves (days)",
+       fill = "Governorate") +
+  theme_minimal() + axis_theme
+
+p3 <- df_sub |>
+  filter(metric == "season_length") |>
+  ggplot(aes(x = factor(decade), y = value, fill = name)) +
+  geom_col(position = "dodge") +
+  labs(title = "Heat Wave Season",
+       x = "Decade", y = "Average length of\n annual heat wave season (days)",
+       fill = "Governorate") +
+  scale_y_continuous(limits = c(0,100), breaks = c(0,25,50,75,100)) +
+  theme_minimal() + axis_theme
+
+p4 <- df_sub |>
+  filter(metric == "mean_intensity") |>
+  ggplot(aes(x = factor(decade), y = value, fill = name)) +
+  geom_col(position = "dodge") +
+  labs(title = "Heat Wave Intensity",
+       x = "Decade",
+       y = "Average temperature above local\n threshold during heat waves (°C)",
+       fill = "Governorate") +
+  theme_minimal() + axis_theme
+
+# --- Combine safely and collect single legend ---
+combined <- (p1 | p2) / (p3 | p4) + plot_layout(guides = "collect")
+
+# Apply one shared theme to the whole patchwork using &
+combined <- combined & theme(
+  # legend
+  legend.position   = "bottom",
+  legend.justification = "center",
+  legend.title      = element_text(size = 8),
+  legend.text       = element_text(size = 7),
+  legend.key.size   = unit(0.35, "cm"),
+  legend.box.margin = margin(t = 0, b = 0),
+
+  # plot annotation text sizes (use plot.title, NOT title)
+  plot.title        = element_text(size = 14, face = "bold", hjust = 0.5),
+  plot.subtitle     = element_text(size = 10, hjust = 0.5),
+  plot.caption      = element_text(size = 8)
+)
+
+# Force a single-row legend (nice and compact)
+combined <- combined & guides(fill = guide_legend(nrow = 1, byrow = TRUE))
+
+# Add overall title / subtitle / caption
+combined + plot_annotation(
+  title = "Heatwave Characteristics in Assiut and Suhag by Decade (1960 - 2024)",
+  subtitle = "Heatwaves: At least 2 consecutive days above the local 85th percentile (1970–2010 baseline, Jul–Aug).\nIntensity = °C above that threshold during heat waves.",
+  caption = "Source: Author's calculations based on ERA5 data"
+)
+
+```
+
+## Tropical nights
+
+The most serious health impacts of a heat wave are often associated with high temperatures at night.
+
+```{r lineplot-tropicalnights}
+tropicalnights_count <- era5_temp_df |>
+  filter(name %in% c("Assiut","Suhag")) |>
+  filter(year > 1960) |> #no data for 1960
+  group_by(name, year) |>
+  summarise(
+    n_days_above20 = sum(mean_mintemp > 20, na.rm = TRUE),
+    n_days_above20_popcells   = sum(mean_mintemp_pop_weighted > 20, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  pivot_longer(
+    cols = starts_with("n_days"),
+    names_to = "type",
+    values_to = "n_days_above20"
+  ) |>
+  mutate(
+    type = recode(type,
+                  "n_days_above20" = "Any cells",
+                  "n_days_above20_popcells"   = "Populated cells"
+    )
+  )
+
+#plot
+tropicalnights_count |>
+  ggplot(aes(x = year, y = n_days_above20, color = type)) +
+  geom_line(linewidth = 0.7, alpha = 0.9) +
+  geom_point(size = 1.2, alpha = 0.7) +
+  geom_smooth(se = FALSE, linetype = "dashed", linewidth = 1) +
+  facet_wrap(~name) +
+  scale_x_continuous(
+    limits = c(1960, 2025),
+    breaks = seq(1960, 2024, by = 4),
+    expand = c(0, 0)
+  ) +
+  scale_y_continuous(
+    limits = c(0, 200),  # adjust based on your data
+    breaks = seq(0, 200, by = 50),
+    expand = c(0, 0)
+  ) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Number of Tropical Nights (Tmin > 20°C) by Governorate",
+    subtitle = "Unweighted vs Population-weighted, 1960–2024 ERA5 Data.",
+    x = "Year",
+    y = "Number of Days",
+    color = "Measure"
+  ) +
+  theme(
+    legend.position    = "bottom",
+    legend.title       = element_text(size = 10),
+    legend.text        = element_text(size = 9),
+    strip.background   = element_rect(fill = "lightgray", color = NA),
+    strip.text         = element_text(face = "bold"),
+    axis.text.x        = element_text(angle = 45, hjust = 1, size = 8),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+  )
+```
+
+## Hot winter days
+
+Temperatures above 30°C during the growing season are particularly damaging to wheat and clover.
+
+```{r lineplot-hotwinterdays}
+days_above30_maxtemp_winterseason <- era5_temp_df |>
+  filter(name %in% c("Assiut","Suhag"),
+         month %in% c(11,12,1,2,3,4)) |>
+  group_by(name, year) |>
+  summarise(
+    n_days_above30max_unweighted = sum(mean_maxtemp > 30, na.rm = TRUE),
+    n_days_above30max_cropland   = sum(mean_maxtemp_cropland_weighted > 30, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  pivot_longer(
+    cols = starts_with("n_days"),
+    names_to = "type",
+    values_to = "n_days_above30"
+  ) |>
+  mutate(
+    type = recode(type,
+                  "n_days_above30max_unweighted" = "Unweighted",
+                  "n_days_above30max_cropland"   = "Cropland-weighted"
+    )
+  )
+
+#plot 1960-2025
+days_above30_maxtemp_winterseason |>
+  filter(type == "Cropland-weighted") |>
+  ggplot(aes(x = year, y = n_days_above30)) +
+  geom_line(linewidth = 0.7, alpha = 0.9) +
+  geom_point(size = 1.2, alpha = 0.7) +
+  geom_smooth(se = FALSE, linetype = "dashed", linewidth = 1) +
+  facet_wrap(~name) +
+  scale_x_continuous(
+    limits = c(1960, 2025),  # consistent with other plots
+    breaks = seq(1960, 2024, by = 4),
+    expand = c(0, 0)
+  ) +
+  scale_y_continuous(
+    limits = c(0, 70),  # consistent with other plots
+    breaks = seq(0,70, by = 10),
+    expand = c(0, 0)
+  ) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Number of Winter Season Days with Max. Temp. > 30°C",
+    subtitle = "Restricted to Cropland Cells - 1960–2024 (Nov. - May.) ERA5 Data.",
+    x = "Year",
+    y = "Number of Days",
+    color = "Measure"
+  ) +
+  theme(
+    legend.position    = "bottom",
+    legend.title       = element_text(size = 10),
+    legend.text        = element_text(size = 9),
+    strip.background   = element_rect(fill = "lightgray", color = NA),
+    strip.text         = element_text(face = "bold"),
+    axis.text.x        = element_text(angle = 45, hjust = 1, size = 8),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+  )
+
+```
+
+## Comparing three measures capturing heat stress
+
+There are various ways to measure human exposure to extreme temperatures. Here, we distinguish three complementary approaches to measuring heat stress, each capturing different aspects of thermal exposure:
+
+1. Measured Air temperature
+2. Heat index
+3. Universal Thermal Climate Index (UTCI)
+
+The following plot compares all three measures across 2024 for the four governorates.
+
+```{r lineplot-heatmeasures}
+temp_joined |>
+  dplyr::select(name, date, mean_maxtemp, hi_dailymax, utci_dailymax) |>
+  filter(date >= "2024-01-01") |>
+  pivot_longer(
+    cols = c(mean_maxtemp, hi_dailymax, utci_dailymax),
+    names_to = "temp_measure",
+    values_to = "value"
+  ) |>
+  mutate(
+    temp_measure = factor(
+      temp_measure,
+      levels = c("mean_maxtemp", "hi_dailymax", "utci_dailymax"),
+      labels = c(
+        "Air Temperature (max)",
+        "Heat Index (max)",
+        "UTCI (max)"))) |>
+  arrange(name, temp_measure, date) |>
+  group_by(name, temp_measure) |>
+  mutate(value = zoo::rollmean(value, k = 7, fill = NA, align = "right")) |>
+  ggplot(aes(x = date, y = value, colour = temp_measure)) +
+  geom_line(
+    aes(linewidth = temp_measure == "UTCI (max)"),
+    alpha = 0.6) +
+  scale_linewidth_manual(values = c(`TRUE` = 1, `FALSE` = 0.4),
+                         guide = "none")+
+  scale_colour_manual(
+    values = c(
+      "Air Temperature (max)" = "#1b9e77",
+      "Heat Index (max)"     = "#d95f02",
+      "UTCI (max)" = "#7570b3"))+
+  scale_y_continuous(
+    limits = c(10, 50),  # consistent with other plots
+    breaks = seq(10, 50, by = 10),
+    expand = c(0, 0)) +
+  labs(
+    title = "Daily Maximum Temperatures across Governorates in 2024",
+    subtitle = "Comparing Air Temperature with Heat Index and Universal Thermal Climate Index (UTCI)",
+    x = NULL,
+    y = "Temperature (°C)",
+    colour = NULL) +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "bottom",
+        strip.background = element_rect(fill = "lightgray", color = NA),
+        strip.text = element_text(face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank())+
+  facet_wrap(~ name)
+
+```
+
+# Precipitation Trends by Governorate
+
+## Annual Rainfall (Population-Weighted)
+
+This plot shows annual rainfall patterns from 1981 to 2024. The smooth trend line (red dashed) helps identify long-term patterns amid high year-to-year variability.
+
+```{r plot-rainfall-basic}
+p_rainfall <- chirps_yearly |>
+  filter(name %in% key_govs) |>
+  ggplot(aes(x = date, y = mean_prec_popweighted_chirps)) +
+  geom_col(fill = "steelblue", color = "black", alpha = 0.7, linewidth = 0.2) +
+  geom_smooth(se = FALSE, color = "darkred", linetype = "dashed", linewidth = 0.8) +
+  facet_wrap(~name, ncol = 2) +
+  scale_x_date(
+    date_labels = "%Y",
+    breaks = seq(from = as.Date("1981-01-01"),
+                 to = as.Date("2024-01-01"),
+                 by = "5 years")
+  ) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Annual Rainfall (Population-weighted) by Governorate",
+    subtitle = "CHIRPS data (1981-2024)",
+    x = "Year",
+    y = "Rainfall (mm)"
+  ) +
+  theme(
+    strip.background = element_rect(fill = "lightgray", color = NA),
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.minor = element_blank()
+  )
+
+ggplotly(p_rainfall, tooltip = c("x", "y")) |>
+  layout(hovermode = "closest")
+```
+
+## Precipitation Statistics by Governorate
+
+```{r summary-table-precip}
+summary_stats_precip <- chirps_yearly |>
+  filter(name %in% key_govs) |>
+  group_by(name) |>
+  summarise(
+    `Mean Annual Rainfall (mm)` = round(mean(mean_prec_popweighted_chirps, na.rm = TRUE), 1),
+    `SD (mm)` = round(sd(mean_prec_popweighted_chirps, na.rm = TRUE), 1),
+    `CV (%)` = round(sd(mean_prec_popweighted_chirps, na.rm = TRUE) /
+                     mean(mean_prec_popweighted_chirps, na.rm = TRUE) * 100, 1),
+    `Min Year (mm)` = round(min(mean_prec_popweighted_chirps, na.rm = TRUE), 1),
+    `Max Year (mm)` = round(max(mean_prec_popweighted_chirps, na.rm = TRUE), 1),
+    .groups = "drop"
+  ) |>
+  rename(Governorate = name)
+
+datatable(
+  summary_stats_precip,
+  options = list(pageLength = 10, dom = 't'),
+  caption = "Precipitation statistics for 1981-2024. CV = Coefficient of Variation (higher values indicate more variability)."
+)
+```
+
+# Drought Trends by Governorate
+
+## ESI
+
+```{r plot-esi-heatmap}
+esi_12week |>
+  mutate(year = factor(year),
+           month = factor(month, levels = 1:12, labels = month.abb)) |>
+  ggplot(aes(x = month, y = year, fill = ESI)) +
+  geom_tile(color = "white") +
+  facet_wrap(~governorate) +
+    scale_fill_gradient2(low = "brown", mid = "white", high = "blue",
+                         midpoint = 0, limits = c(-3.5, 3.5),
+                         name = "ESI") +
+    labs(title = "Assiut & Suhag: Monthly Evaporative Stress Index (12-week)\nbetween 2001- 2024",
+         subtitle = "Red indicates drought stress, Blue indicates wet anomaly.\nESI captures temporal anomalies in evapotranspiration based on remotely sensed\nland-surface temperature (LST) time-change signals.",
+         caption = "Source: Author's calculations based on NOAA ESI Data",
+         x = "Month", y = "Year") +
+    theme_minimal()+
+    theme(
+      # legend
+      legend.position   = "bottom",
+      legend.justification = "center",
+      legend.title      = element_text(size = 9),
+      legend.text       = element_text(size = 8),
+      legend.key.size   = unit(0.35, "cm"),
+      legend.box.margin = margin(t = 0, b = 0),
+      axis.text.x        = element_text(angle = 45, hjust = 1, size = 8))
+```
+
+# Key Findings
+
+## Temperature
+
+### 1. Accelerating Warming Trend
+- All governorates show clear warming trends since 1960
+- Total warming ranges from approximately 1.5°C to 2.5°C depending on location
+- The warming trend has accelerated since 2000, with the warmest years concentrated in the 2010s and 2020s
+
+### 2. Regional Variations
+- **Cairo and Alexandria** (Lower Egypt): Show strong warming with significant heat stress implications for dense urban populations
+- **Assiut and Suhag** (Upper Egypt): Experience higher absolute temperatures and larger temperature swings
+
+### 3. Population Weighting Matters
+- Population-weighted temperatures often differ from unweighted averages by 0.2-0.5°C
+- These differences reflect spatial variation in population distribution and climate within governorates
+- Population-weighted measures are more relevant for assessing human exposure to climate change
+
+## Precipitation
+
+### 1. High Inter-Annual Variability
+- Rainfall shows substantial year-to-year variation, with coefficients of variation typically exceeding 30%
+- This variability poses challenges for agriculture and water resource management
+
+### 2. Spatial Patterns
+- **Alexandria**: Highest absolute rainfall among study governorates (Mediterranean climate)
+- **Cairo**: Moderate rainfall with increasing aridity
+- **Assiut and Suhag**: Lowest rainfall (arid/hyper-arid zones) with extreme sensitivity to precipitation changes
+
+### 3. Extreme Events
+- Both extreme dry and extreme wet years have occurred across all governorates
+- Recent decades show no clear long-term trend in total annual precipitation, but high variability persists
+- The timing and intensity of extreme events are critical for agricultural systems and water availability
+
+# Methodology Notes
+
+## Z-Scores and Climate Shocks
+
+Z-scores normalize deviations by historical variability:
+
+$$Z = \frac{X_{year} - \mu}{\sigma}$$
+
+Where:
+- $X_{year}$ is the annual value for a given year
+- $\mu$ is the mean for the baseline period
+- $\sigma$ is the standard deviation for the baseline period
+
+Z-scores beyond ±2 indicate values more than 2 standard deviations from the historical norm, representing exceptional events.
+
+## Population Weighting
+
+Population-weighted climate variables are calculated by weighting each grid cell's value by its population:
+
+$$X_{weighted} = \frac{\sum_i X_i \times Pop_i}{\sum_i Pop_i}$$
+
+This approach better represents human exposure to climate changes than simple spatial averages.
+
+# Data Availability
+
+All climate data and analysis code are available in the project repository:
+
+- **Temperature Data**: `Data/intermediate/Governorate Data/era5_temp_19602024.Rds`
+- **Precipitation Data**: `Data/intermediate/Governorate Data/chirps_prec_yearly_19812024.Rds`
+- **Analysis Code**: `Code/4_EDA/ClimateChange_Report.Rmd`
+
+---
+
+*Report generated on `r Sys.Date()` using R version `r getRversion()`*

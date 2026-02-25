@@ -22,8 +22,7 @@ egypt_hdx <- st_read(paste(here(),
                            "egy_admbnda_adm1_capmas_20170421.shp",sep = "/"))
 
 #Select relevant governorates
-egypt_gov <- egypt_hdx |>
-  filter(ADM1_EN %in% c("Assiut","Suhag" ,"Alexandria","Cairo"))
+egypt_gov <- egypt_hdx
 
 ####Load Max. Heat Index (2000 - 2024) ####
 heatindex_dailymax <- terra::rast(paste(here(),"Data", "intermediate","ERA5",

@@ -21,8 +21,9 @@ invisible(lapply(libs,library,character.only = TRUE))
 temp_era5_dailymean_19602024 <- terra::rast(paste(here(),"Data","intermediate","ERA5",
                                   "temp_era5_dailymean_19602024.tif",sep = "/"))
 
-temp_era5_dailymax_19602024 <- terra::rast(paste(here(),"Data","intermediate","ERA5",
-                                  "temp_era5_dailymax_19602024.tif",sep = "/"))
+temp_era5_dailymax_19602024 <- terra::rast(paste(here(),
+                                                 "Data","intermediate","ERA5",
+                                                 "temp_era5_dailymax_19602024.tif",sep = "/"))
 
 #Egypt GOV. shapefile
 egypt_hdx <- st_read(paste(here(),
@@ -492,11 +493,12 @@ combined_map <- combined_map +
 combined_map
 
 ######Population - 2020 ######
-pop_2020_cropped <- crop(pop_2020,egypt_2gov)
-pop_2020_cropped <- mask(pop_2020_cropped, egypt_2gov)
+pop_2020_cropped <- crop(pop_2020,egypt_4gov)
+pop_2020_cropped <- mask(pop_2020_cropped, egypt_4gov)
 pop_2020_cropped_df <- as.data.frame(pop_2020_cropped,
                                    xy = TRUE, na.rm = TRUE)
 
+#with static background map
 pop_map_2020_2gov <- ggmap(bg_map) +
   geom_sf(data = egypt_2gov, inherit.aes = FALSE,
           aes(color = ADM1_EN),
@@ -514,11 +516,21 @@ pop_map_2020_2gov <- ggmap(bg_map) +
 
 pop_map_2020_2gov
 
+#leaflet map
+pal_pop <- colorNumeric("viridis", domain = pop_2020_cropped_df$b1,
+                        na.color = "transparent")
+
+leaflet() |>
+  addTiles() |>
+  addRasterImage(pop_2020_cropped, colors = pal_pop, opacity = 0.7) |>
+  addPolygons(data = egypt_2gov, fill = FALSE, color = "white", weight = 2) |>
+  addLegend(pal = pal_pop, values = pop_2020_cropped_df$b1, title = "Population")
+
 ######Cropland - 2021 ######
-cropland_2021_cropped <- crop(cropland_mask,egypt_2gov)
-cropland_2021_cropped <- mask(cropland_2021_cropped, egypt_2gov)
+cropland_2021_cropped <- crop(cropland_mask,egypt_4gov)
+cropland_2021_cropped <- mask(cropland_2021_cropped, egypt_4gov)
 cropland_2021_cropped_df <- as.data.frame(cropland_2021_cropped,
-                                     xy = TRUE, na.rm = TRUE)
+                                          xy = TRUE, na.rm = TRUE)
 
 cropland_2021_cropped_df <- cropland_2021_cropped_df |>
   rename(Cropland = layer) |>
@@ -626,3 +638,38 @@ leaflet() |>
   addRasterImage(temp_era5_dailymean_19602024[[23742]], colors = pal, opacity = 0.7) |>
   addLegend(pal = pal, values = values(temp_era5_dailymean_19602024[[23742]]),
             title = "Δ Temp (°C)")
+
+
+# Save Data ---------------------------------------------------------------
+####Population raster####
+#save cropped raster image
+terra::writeRaster(pop_2020_cropped,
+                   filename = paste(here(), "Data", "intermediate", "Landscan",
+                                    "pop_2020_cropped.tif", sep = "/"),
+                   overwrite = TRUE)
+
+#save cropped data frame
+saveRDS(pop_2020_cropped_df,
+        file = paste(here(),"Data","intermediate","Landscan",
+                     "pop_2020_cropped_df.Rds",sep = "/"))
+
+
+####Cropland raster####
+#save cropped raster image
+# make categorical
+crop_2021_cropped_cat <- as.factor(crop_2021_cropped)
+
+# define labels
+levels(crop_2021_cropped_cat) <- data.frame(
+  value = c(0, 1),
+  landuse = c("Other land use", "Cropland"))
+
+terra::writeRaster(crop_2021_cropped_cat,
+                   filename = paste(here(), "Data", "intermediate", "Modis",
+                                    "cropland_2021_cropped_cat.tif", sep = "/"),
+                   overwrite = TRUE)
+
+#save cropped data frame
+saveRDS(cropland_2021_cropped_df,
+        file = paste(here(),"Data","intermediate","Modis",
+                     "cropland_2021_cropped_df.Rds",sep = "/"))

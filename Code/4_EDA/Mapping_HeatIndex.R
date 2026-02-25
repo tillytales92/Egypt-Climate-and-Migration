@@ -15,8 +15,9 @@ if (any(installed_libs == FALSE)){
 invisible(lapply(libs,library,character.only = TRUE))
 
 ####Households####
-hh_data_imputedgps <- readRDS(file = paste(here(),"Data",
-                                           "hhdata_imputedgps_fullsample.rds",sep = "/"))
+hh_data_imputedgps <- readRDS(file = paste(here(),
+                                           "Data","intermediate","Household Data",
+                                           "hhdata_imputedgps.rds",sep = "/"))
 
 # Convert to sf object
 hh_sf <- hh_data_imputedgps |>
@@ -30,7 +31,8 @@ hh_sf <- hh_data_imputedgps |>
 #Comparison: Heat index vs. measured temp. --------------------------------
 #Max temp.
 #Load Daily max raster (1960 - 2024)
-temp_era5_dailymax_19602024 <- terra::rast(paste(here(),"Data", "Temperature","ERA5",
+temp_era5_dailymax_19602024 <- terra::rast(paste(here(),
+                                                 "Data","intermediate","ERA5",
                                                  "temp_era5_dailymax_19602024.tif",sep = "/"))
 
 #check time dimension
@@ -44,8 +46,7 @@ temp_era5_dailymax_2000s <- temp_era5_dailymax_19602024[[time_info >=
 temp_era5_dailymax_2000s <- temp_era5_dailymax_2000s-273.15
 
 #Load Max. Heat Index (2000 - 2024)
-heatindex_dailymax <- terra::rast(paste(here(),"Data", "Temperature","ERA5",
-                                        "Heatindex",
+heatindex_dailymax <- terra::rast(paste(here(),"Data", "intermediate","ERA5",
                                         "heatindex_dailymax_2000_2024.tif",sep = "/"))
 
 time_vector_hi <- as.Date(names(heatindex_dailymax))
